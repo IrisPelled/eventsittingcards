@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seating Cards</title>
+    <!-- Include Bootstrap CSS from cdnjs -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Include Google Font for Hebrew -->
+    <link href="https://fonts.googleapis.com/css2?family=Alef:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #ffe6e6; /* Light pink background */
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        .form-label {
+            color: #555;
+        }
+        .btn-primary {
+            background-color: #ff6f91;
+            border-color: #ff6f91;
+            width: 48%;
+            margin-right: 2%;
+        }
+        .btn-primary:hover {
+            background-color: #ff5b81;
+            border-color: #ff5b81;
+        }
+        .btn-success {
+            background-color: #4dabf7; /* Light blue color */
+            border-color: #4dabf7;
+            width: 48%;
+        }
+        .btn-success:hover {
+            background-color: #3a9be0;
+            border-color: #3a9be0;
+        }
+        .card-background {
+            background-image: url('background_card.png'); /* Background image path */
+            background-size: cover;
+            width: 5cm;
+            height: 10cm;
+            position: relative;
+            margin: 20px auto;
+            display: block;
+            direction: rtl; /* Ensure RTL text direction for Hebrew */
+        }
+        .card-name, .card-bride-groom {
+            font-family: 'Alef', sans-serif; /* Apply Google Font */
+        }
+        .card-name {
+            position: absolute;
+            top: 2cm; /* Adjust based on your background image */
+            left: 0.5cm; /* Adjust based on your background image */
+            right: 0.5cm; /* Adjust based on your background image */
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: black;
+        }
+        .card-table-number {
+            position: absolute;
+            top: 4.5cm; /* Adjust based on your background image */
+            left: 0.5cm; /* Adjust based on your background image */
+            right: 0.5cm; /* Adjust based on your background image */
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: black;
+        }
+        .card-bride-groom {
+            position: absolute;
+            bottom: 2.5cm; /* Raised position for bride and groom names */
+            left: 0.5cm; /* Adjust based on your background image */
+            right: 0.5cm; /* Adjust based on your background image */
+            text-align: center;
+            font-size: 1em;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Event Seating Cards</h1>
+        <form id="upload-form" class="mb-4">
+            <div class="mb-3">
+                <label for="excel-file" class="form-label">Upload Excel File</label>
+                <input type="file" class="form-control" id="excel-file" accept=".xlsx, .xls">
+            </div>
+            <div class="mb-3">
+                <label for="bride-groom-names" class="form-label">Bride and Groom Names</label>
+                <input type="text" class="form-control" id="bride-groom-names" placeholder="Enter bride and groom names">
+            </div>
+        </form>
+        <form id="input-form">
+            <div class="mb-3">
+                <label for="guest-name" class="form-label">Guest Name</label>
+                <input type="text" class="form-control" id="guest-name" placeholder="Enter guest name">
+            </div>
+            <div class="text-center">
+                <button type="button" class="btn btn-primary mb-2" onclick="generateCard()">Generate Card</button>
+                <button type="button" class="btn btn-success mb-2" onclick="printCard()">Print Card</button>
+            </div>
+        </form>
+        <div id="card-container" class="mt-5"></div>
+    </div>
+
+    <!-- Include necessary JS libraries from cdnjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let guestData = {};
+        let brideGroomNames = '';
+
+        document.getElementById('excel-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                // Store guest data in an object
+                rows.forEach((row, index) => {
+                    if (index === 0) return; // Skip header row
+                    const name = row[0];
+                    const table = row[1];
+                    guestData[name] = table;
+                });
+                alert('Excel file loaded successfully.');
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('bride-groom-names').addEventListener('input', function(e) {
+            brideGroomNames = e.target.value;
+        });
+
+        function generateCard() {
+            const name = document.getElementById('guest-name').value;
+            const table = guestData[name];
+
+            if (!name || !table) {
+                alert('Please enter a valid guest name and make sure the Excel file is uploaded.');
+                return;
+            }
+
+            const cardContainer = document.getElementById('card-container');
+            cardContainer.innerHTML = ''; // Clear previous card
+
+            const card = document.createElement('div');
+            card.className = 'card-background';
+            card.innerHTML = `<div class="card-name">${name}</div>
+                              <div class="card-table-number">${table}</div>
+                              <div class="card-bride-groom">${brideGroomNames}</div>`;
+            cardContainer.appendChild(card);
+        }
+
+        function printCard() {
+            const cardContainer = document.getElementById('card-container');
+            const card = cardContainer.querySelector('.card-background');
+            if (!card) {
+                alert('No card to print. Please generate a card first.');
+                return;
+            }
+
+            const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+            html2canvas(card).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                pdf.addImage(imgData, 'PNG', 10, 10, 50, 100); // Adjusted dimensions for the card
+                pdf.save('seating-card.pdf');
+            }).catch(error => {
+                console.error('Error generating PDF:', error);
+                alert('An error occurred while generating the PDF. Check the console for details.');
+            });
+        }
+    </script>
+</body>
+</html>
